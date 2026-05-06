@@ -1,0 +1,21 @@
+# Code Owners
+# This file defines who owns and can approve changes to different parts of the codebase
+
+# Global owners (can approve any changes)
+* @20562
+
+# Backend specific owners
+/backend/ @20562
+/backend/**/*.js @20562
+
+# ML specific owners  
+/ml/ @20562
+/ml/**/*.py @20562
+
+# Device specific owners
+/device/ @20562
+/device/**/*.ino @20562
+
+# Documentation
+/docs/ @20562
+/documentation/ @20562
