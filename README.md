@@ -28,6 +28,11 @@ Système IoT maritime intégré pour protéger les travailleurs de la mer au Sé
                Détection  Web/React
 ```
 
+### 🎨 Maquette & Design
+
+**Voir la maquette interactive du projet :**
+[📱 Maquette SenMoolProtect 2.0 sur Readdy.ai](https://readdy.ai/project/20815d8a-034c-4c0c-8571-3bac81188637)
+
 ### Structure Projet
 
 ```
