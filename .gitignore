@@ -1,0 +1,87 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+lerna-debug.log*
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Database
+data/
+*.db
+*.sqlite
+mongodb_data/
+
+# ML Models
+models/
+*.pkl
+*.joblib
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Testing
+coverage/
+.nyc_output/
+.pytest_cache/
+
+# Temporary files
+tmp/
+temp/
+.tmp
+*.tmp
+
+# OS files
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor
+*.swp
+*.swo
+.vimrc
+.editorconfig
+
+# CI/CD
+.github/workflows/secrets
+
+# Generated files
+.env.production
+.env.production.local

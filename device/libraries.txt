@@ -1,0 +1,10 @@
+# Required Libraries for ESP32 Firmware
+# Install via Arduino IDE: Sketch > Include Library > Manage Libraries
+
+TinyGPS++
+MAX30100 by OXullo Intersec
+MPU6050 by Rui Santos
+DallasTemperature
+OneWire
+PubSubClient by Nick O'Leary
+LoRa by Sandeep Mistry

@@ -1,0 +1,145 @@
+version: '3.8'
+
+services:
+  # MQTT Broker
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: senmool-mqtt
+    ports:
+      - "1883:1883"
+      - "8883:8883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    networks:
+      - senmool-network
+    restart: unless-stopped
+    healthcheck:
+      test: mosquitto_sub -h localhost -t '$SYS/#' -W 1 -E
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MongoDB
+  mongodb:
+    image: mongo:6.0
+    container_name: senmool-db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASS:-change_me}
+      MONGO_INITDB_DATABASE: senmool
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/init.js:ro
+    networks:
+      - senmool-network
+    restart: unless-stopped
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Node.js Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: senmool-backend
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3000
+      MONGODB_URI: mongodb://admin:${MONGODB_PASS:-change_me}@mongodb:27017/senmool
+      MQTT_BROKER: mosquitto
+      MQTT_PORT: 1883
+      JWT_SECRET: ${JWT_SECRET:-secret}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - senmool-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Python ML - Fall Detection
+  ml-fall-detection:
+    build:
+      context: ./ml
+      dockerfile: Dockerfile.fall
+    container_name: senmool-ml-fall
+    depends_on:
+      - mosquitto
+      - backend
+    environment:
+      MQTT_BROKER: mosquitto
+      MQTT_PORT: 1883
+      API_URL: http://backend:3000
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - ./ml:/app
+      - ./ml/models:/app/models
+    networks:
+      - senmool-network
+    restart: unless-stopped
+
+  # Python ML - Anomaly Detection
+  ml-anomaly-detection:
+    build:
+      context: ./ml
+      dockerfile: Dockerfile.anomaly
+    container_name: senmool-ml-anomaly
+    depends_on:
+      - mosquitto
+      - backend
+    environment:
+      MQTT_BROKER: mosquitto
+      MQTT_PORT: 1883
+      API_URL: http://backend:3000
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - ./ml:/app
+    networks:
+      - senmool-network
+    restart: unless-stopped
+
+  # Dashboard Web (Optional)
+  dashboard:
+    image: node:18-alpine
+    container_name: senmool-dashboard
+    working_dir: /app
+    command: npm start
+    depends_on:
+      - backend
+    environment:
+      REACT_APP_API_URL: http://localhost:3000
+      REACT_APP_WEBSOCKET_URL: ws://localhost:3000
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./dashboard:/app
+    networks:
+      - senmool-network
+    restart: unless-stopped
+
+networks:
+  senmool-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local
