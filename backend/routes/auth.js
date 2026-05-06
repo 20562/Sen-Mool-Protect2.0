@@ -22,9 +22,13 @@ router.post('/login', async (req, res) => {
     if (!validPassword) return res.status(401).json({ error: 'Invalid credentials' });
     
     // Generate token
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET environment variable is not defined. Configure it in .env');
+    }
     const token = jwt.sign(
       { id: user.id, username: user.username, role: user.role },
-      process.env.JWT_SECRET || 'secret',
+      jwtSecret,
       { expiresIn: '24h' }
     );
     
