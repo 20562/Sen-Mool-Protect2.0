@@ -1,0 +1,118 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      mongodb:
+        image: mongo:5.0
+        options: >-
+          --health-cmd mongosh
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 27017:27017
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies (Backend)
+      run: cd backend && npm install
+    
+    - name: Run backend tests
+      run: cd backend && npm test
+      env:
+        MONGODB_TEST_URI: mongodb://localhost:27017/senmool-test
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        cache: 'pip'
+    
+    - name: Install Python dependencies
+      run: |
+        cd ml
+        pip install -r requirements.txt
+    
+    - name: Run ML tests
+      run: cd ml && python -m pytest
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: cd backend && npm install
+    
+    - name: Run ESLint
+      run: cd backend && npm run lint || true
+    
+    - name: Check Flutter formatting
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.10.0'
+    
+    - name: Flutter analyze
+      run: cd app-mobile && flutter pub get && flutter analyze
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [test, lint]
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Build Docker images
+      run: |
+        docker build -t senmool-backend:${{ github.sha }} ./backend
+        docker build -t senmool-ml-fall:${{ github.sha }} ./ml -f ml/Dockerfile.fall
+        docker build -t senmool-ml-anomaly:${{ github.sha }} ./ml -f ml/Dockerfile.anomaly
+    
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.10.0'
+    
+    - name: Build APK
+      run: cd app-mobile && flutter build apk --release
+    
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: senmool-app-release
+        path: app-mobile/build/app/outputs/apk/release/app-release.apk
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Deploy to production
+      run: |
+        echo "Deploying to production..."
+        # Add deployment commands here
